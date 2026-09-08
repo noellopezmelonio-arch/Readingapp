@@ -26,7 +26,7 @@
       "genre": "Drama",
       "publicationYear": 1800,
       "ownerId": "user-noel",
-      "updatedAt": 1788867130073
+      "updatedAt": 1788870002100
     },
     {
       "id": "f3ed17e4-1285-40d6-aa8b-8d14cd4b6a4d",
@@ -40,7 +40,7 @@
       "genre": "",
       "publicationYear": null,
       "ownerId": "user-noel",
-      "updatedAt": 1788867130080
+      "updatedAt": 1788870002109
     },
     {
       "id": "2ac3b362-1023-4ead-911e-d80844b44909",
@@ -54,10 +54,10 @@
       "genre": "Drama",
       "publicationYear": null,
       "ownerId": "user-noel",
-      "updatedAt": 1788867130087
+      "updatedAt": 1788870002116
     }
   ],
   "sync": {
-    "lastSync": 1788867130092
+    "lastSync": 1788870002124
   }
 }

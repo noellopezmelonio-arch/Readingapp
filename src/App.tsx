@@ -5,7 +5,6 @@ import { BookList } from './components/BookList';
 import { BookDetails } from './components/BookDetails';
 import { BookOpen } from 'lucide-react';
 import { Login } from './components/Login';
-// DebugOverlay removed for production/testing
 import type { User } from './types';
 
 function App() {
@@ -180,7 +179,7 @@ function App() {
       </main>
       
     </div>
-    {/* DebugOverlay removed */}
+    {/* debug overlay removed */}
     </>
   );
 }
