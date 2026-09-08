@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Book } from '../types';
 
 const STORAGE_KEY = 'reading-tracker-books';
-const API_BASE = 'https://mockapi.io';
+const API_BASE = 'https://6aa024883e0d88d3d7e5692d.mockapi.io';
 
 export function useBooks() {
   const [isSyncing, setIsSyncing] = useState(false);
