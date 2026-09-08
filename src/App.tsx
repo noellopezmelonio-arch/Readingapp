@@ -20,7 +20,7 @@ function App() {
     try { return localStorage.getItem('reading-tracker-selected-id'); } catch { return null; }
   });
   const setSelected = (id: string | null) => {
-    console.debug('[App] setSelected called', id, new Error().stack.split('\n').slice(1,4).join('\n'));
+    console.debug('[App] setSelected called', id, new Error().stack?.split('\n').slice(1,4).join('\n'));
     // If a sync is in progress, ignore automatic clears to avoid UI jumping
     try {
       if (id === null && isSyncing) {
@@ -131,7 +131,7 @@ function App() {
 
 
   if (!currentUser) {
-    return <Login authenticate={authenticate} onLogin={login} />;
+  return <Login authenticate={(email, password) => { authenticate(email, password); return null; }} onLogin={login} />;
   }
   const userBooks = books.filter(b => b.ownerId === currentUser.id);
   // Keep showing the selected book by id even if ownerId mapping changes
