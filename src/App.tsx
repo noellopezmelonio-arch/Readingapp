@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useBooks } from './hooks/useBooks';
 import useUsers from './hooks/useUsers';
-import BookList from './components/BookList'; // CORREGIDO: Importación por defecto
+import { BookList } from './components/BookList';
 import { BookDetails } from './components/BookDetails';
 import { BookOpen } from 'lucide-react';
 import { Login } from './components/Login';
