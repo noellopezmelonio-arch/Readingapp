@@ -18,16 +18,6 @@ export function useBooks() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as Partial<Book>[];
-        let noelId: string | null = null;
-        try {
-          const usersRaw = localStorage.getItem('reading-tracker-users');
-          if (usersRaw) {
-            const users = JSON.parse(usersRaw) as Array<any>;
-            const noel = users.find(u => String(u.email).toLowerCase() === 'noelviajando@gmail.com');
-            if (noel) noelId = noel.id;
-          }
-        } catch (e) {}
-        
         return dedupe(parsed.map(p => ({
           id: p.id ?? crypto.randomUUID(),
           title: (p.title as string) ?? 'Untitled',
@@ -39,7 +29,7 @@ export function useBooks() {
           pages: (typeof p.pages === 'number' ? p.pages : (p.pages ? Number(p.pages) : null)) ?? null,
           genre: (p.genre as string) ?? '',
           publicationYear: (typeof p.publicationYear === 'number' ? p.publicationYear : (p.publicationYear ? Number(p.publicationYear) : null)) ?? null,
-          ownerId: (p as any).ownerId ?? noelId ?? null
+          ownerId: (p as any).ownerId ?? null
         } as Book)));
       } catch (e) {
         console.error(e);
@@ -47,26 +37,6 @@ export function useBooks() {
     }
     return [];
   });
-
-  useEffect(() => {
-    console.debug(books.length);
-  }, [books]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const hasLocal = raw && raw !== '[]';
-        if (hasLocal) return;
-        const res = await fetch(`${API_BASE}/books`);
-        if (!res.ok) return;
-        const serverBooks = await res.json() as Book[];
-        if (serverBooks && serverBooks.length) {
-          setBooks(dedupe(serverBooks));
-        }
-      } catch (e) {}
-    })();
-  }, []);
 
   const addBook = (title: string, ownerId: string) => {
     const newBook: Book = {
@@ -86,11 +56,6 @@ export function useBooks() {
     setBooks(prev => {
       const next = dedupe([...prev, newBook]);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      fetch(`${API_BASE}/books`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newBook)
-      }).catch(() => {});
       return next;
     });
     return newBook.id;
@@ -109,16 +74,48 @@ export function useBooks() {
     setBooks(prev => {
       const next = prev.map(b => b.id === updated.id ? updated : b);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      fetch(`${API_BASE}/books/${updated.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
-      }).catch(() => {});
       return next;
     });
   };
 
-  async function syncLocalToServer() {
+  // FUNCIÓN CRÍTICA: Envía todos los libros a internet de golpe
+  const saveAndSync = async (userId: string | null) => {
+    if (!userId) return;
+    try {
+      setIsSyncing(true);
+      const userBooks = books.filter(b => b.ownerId === userId);
+      
+      // Consultar qué libros ya existen en el servidor para no duplicar
+      const res = await fetch(`${API_BASE}/books`);
+      const serverBooks = res.ok ? await res.json() as Book[] : [];
+      const serverIds = new Set(serverBooks.map(b => String(b.id)));
+
+      for (const book of userBooks) {
+        if (serverIds.has(String(book.id))) {
+          // Si ya existe, actualiza sus datos con un PUT
+          await fetch(`${API_BASE}/books/${book.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(book)
+          });
+        } else {
+          // Si es nuevo, lo registra con un POST
+          await fetch(`${API_BASE}/books`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(book)
+          });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Descargar libros desde internet si el localStorage está vacío (para incógnito)
+  const syncLocalToServer = async () => {
     try {
       setIsSyncing(true);
       const res = await fetch(`${API_BASE}/books`);
@@ -135,7 +132,7 @@ export function useBooks() {
     } finally {
       setIsSyncing(false);
     }
-  }
+  };
 
   return {
     books,
@@ -143,8 +140,7 @@ export function useBooks() {
     deleteBook,
     updateBook,
     syncLocalToServer,
+    saveAndSync,
     isSyncing
   };
 }
-
-

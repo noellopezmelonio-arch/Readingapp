@@ -8,7 +8,7 @@ import { Login } from './components/Login';
 import type { Book, User } from './types';
 
 function App() {
-  const { books, addBook, deleteBook, updateBook } = useBooks();
+  const { books, addBook, deleteBook, updateBook, syncLocalToServer, saveAndSync } = useBooks();
   const { authenticate, users } = useUsers();
   
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -21,6 +21,12 @@ function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedBook = books.find(b => b.id === selectedId);
   const [mobileView, setMobileView] = useState<'list' | 'details'>('list');
+
+  useEffect(() => {
+    if (currentUser) {
+      syncLocalToServer();
+    }
+  }, [currentUser]);
 
   const handleSelect = (id: string | null) => {
     setSelectedId(id);
@@ -36,7 +42,6 @@ function App() {
     }
   };
 
-  // CORREGIDO: Adaptación estricta al tipado que espera BookDetails
   const handleUpdateBookFields = (id: string, updates: Partial<Book>) => {
     const currentBook = books.find(b => b.id === id);
     if (currentBook) {
@@ -77,7 +82,7 @@ function App() {
           books={userBooks}
           selectedId={selectedId}
           onSelect={handleSelect}
-          onAdd={(title: string) => { // CORREGIDO: Tipado explícito de string
+          onAdd={(title: string) => {
             const id = addBook(title, currentUser.id);
             handleSelect(id);
           }}
@@ -86,7 +91,13 @@ function App() {
       
       <main className={`${mobileView === 'details' ? 'block' : 'hidden'} sm:block flex-1 overflow-hidden relative h-full`}>
         <div className="absolute top-4 right-4 z-40 flex gap-2">
-          <button onClick={logout} className="text-sm text-red-600">Logout</button>
+          <button 
+            onClick={() => saveAndSync(currentUser?.id)} 
+            className="text-sm text-blue-600 font-medium hover:underline"
+          >
+            Save changes
+          </button>
+          <button onClick={logout} className="text-sm text-red-600 font-medium hover:underline">Logout</button>
         </div>
         {selectedBook ? (
           <div className="h-full">
@@ -95,7 +106,7 @@ function App() {
             </div>
             <BookDetails 
               book={selectedBook} 
-              onUpdate={handleUpdateBookFields} // CORREGIDO: Función con mapeo adaptado
+              onUpdate={handleUpdateBookFields}
               onDelete={handleDelete}
             />
           </div>
