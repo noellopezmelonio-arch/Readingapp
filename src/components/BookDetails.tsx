@@ -185,8 +185,8 @@ export function BookDetails({ book, onUpdate, onDelete }: BookDetailsProps) {
           />
         </div>
         <NotesEditor 
-          notes={book.notes} 
-          onChange={(notes: string) => onUpdate(book.id, { notes })} 
+          initialValue={book.notes} 
+          onSave={(newValue) => onUpdate(book.id, { notes:newValue })} 
         />
       </div>
     </div>
