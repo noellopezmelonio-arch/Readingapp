@@ -1,100 +1,148 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Book } from '../types';
-import { Plus, Book as BookIcon, CheckCircle, Search } from 'lucide-react';
 
-interface BookListProps {
-  books: Book[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  onAdd: (title: string) => void;
-}
+const STORAGE_KEY = 'reading-tracker-books';
+const API_BASE = 'https://mockapi.io';
 
-export function BookList({ books, selectedId, onSelect, onAdd }: BookListProps) {
-  const [newTitle, setNewTitle] = useState('');
-  const [search, setSearch] = useState('');
+export function useBooks() {
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newTitle.trim()) {
-      onAdd(newTitle.trim());
-      setNewTitle('');
-    }
+  const dedupe = (arr: Book[]) => {
+    const m = new Map<string, Book>();
+    arr.forEach(b => { if (b && b.id) m.set(String(b.id), b); });
+    return Array.from(m.values());
   };
 
-  const filteredBooks = books.filter(b => b.title.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div className="w-full md:w-80 border-r border-gray-200 bg-white flex flex-col h-full flex-shrink-0">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold flex items-center text-gray-800 mb-4">
-          <BookIcon className="mr-2 text-blue-600" /> My Library
-        </h2>
+  const [books, setBooks] = useState<Book[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as Partial<Book>[];
+        let noelId: string | null = null;
+        try {
+          const usersRaw = localStorage.getItem('reading-tracker-users');
+          if (usersRaw) {
+            const users = JSON.parse(usersRaw) as Array<any>;
+            const noel = users.find(u => String(u.email).toLowerCase() === 'noelviajando@gmail.com');
+            if (noel) noelId = noel.id;
+          }
+        } catch (e) {}
         
-        <form onSubmit={handleAdd} className="flex space-x-2 mb-4">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="New book title..."
-            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-          />
-          <button 
-            type="submit" 
-            disabled={!newTitle.trim()}
-            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            <Plus size={20} />
-          </button>
-        </form>
+        return dedupe(parsed.map(p => ({
+          id: p.id ?? crypto.randomUUID(),
+          title: (p.title as string) ?? 'Untitled',
+          isRead: (p.isRead as boolean) ?? false,
+          customInfo: (p.customInfo as any[]) ?? [],
+          notes: (p.notes as string) ?? '',
+          author: (p.author as string) ?? '',
+          finishedDate: (p.finishedDate as string) ?? null,
+          pages: (typeof p.pages === 'number' ? p.pages : (p.pages ? Number(p.pages) : null)) ?? null,
+          genre: (p.genre as string) ?? '',
+          publicationYear: (typeof p.publicationYear === 'number' ? p.publicationYear : (p.publicationYear ? Number(p.publicationYear) : null)) ?? null,
+          ownerId: (p as any).ownerId ?? noelId ?? null
+        } as Book)));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
 
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search books..."
-            className="w-full pl-9 pr-3 py-2 border rounded-full text-sm bg-gray-50 focus:outline-none focus:bg-white focus:border-blue-500"
-          />
-        </div>
-      </div>
+  useEffect(() => {
+    console.debug(books.length);
+  }, [books]);
 
-      <div className="flex-1 overflow-y-auto">
-        {filteredBooks.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm mt-4">
-            {search ? 'No books match your search.' : 'Your library is empty. Add a book above!'}
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {filteredBooks.map(book => (
-              <li key={book.id}>
-                <button
-                  onClick={() => onSelect(book.id)}
-                  className={`w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                    selectedId === book.id ? 'bg-blue-50/50 border-l-4 border-blue-600' : 'border-l-4 border-transparent'
-                  }`}
-                >
-                  <div className="flex-1 overflow-hidden">
-                    <div className={`font-medium truncate pr-2 ${selectedId === book.id ? 'text-blue-900' : 'text-gray-700'}`}>
-                      {book.title}
-                    </div>
-                    <div className="text-xs text-gray-500 truncate mt-1">
-                      {(() => {
-                        const parts: string[] = [];
-                        if (book.author) parts.push(book.author);
-                        if (book.publicationYear) parts.push(String(book.publicationYear));
-                        if (book.pages) parts.push(`${book.pages} pages`);
-                        return parts.join(' • ');
-                      })()}
-                    </div>
-                  </div>
-                  {book.isRead && <CheckCircle size={16} className="text-green-500 flex-shrink-0 ml-3" />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const hasLocal = raw && raw !== '[]';
+        if (hasLocal) return;
+        const res = await fetch(`${API_BASE}/books`);
+        if (!res.ok) return;
+        const serverBooks = await res.json() as Book[];
+        if (serverBooks && serverBooks.length) {
+          setBooks(dedupe(serverBooks));
+        }
+      } catch (e) {}
+    })();
+  }, []);
+
+  const addBook = (title: string, ownerId: string) => {
+    const newBook: Book = {
+      id: crypto.randomUUID(),
+      title,
+      isRead: false,
+      customInfo: [],
+      notes: '',
+      author: '',
+      finishedDate: null,
+      pages: null,
+      genre: '',
+      publicationYear: null,
+      ownerId
+    };
+    
+    setBooks(prev => {
+      const next = dedupe([...prev, newBook]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      fetch(`${API_BASE}/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBook)
+      }).catch(() => {});
+      return next;
+    });
+    return newBook.id;
+  };
+
+  const deleteBook = (id: string) => {
+    setBooks(prev => {
+      const next = prev.filter(b => b.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      fetch(`${API_BASE}/books/${id}`, { method: 'DELETE' }).catch(() => {});
+      return next;
+    });
+  };
+
+  const updateBook = (updated: Book) => {
+    setBooks(prev => {
+      const next = prev.map(b => b.id === updated.id ? updated : b);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      fetch(`${API_BASE}/books/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      }).catch(() => {});
+      return next;
+    });
+  };
+
+  async function syncLocalToServer() {
+    try {
+      setIsSyncing(true);
+      const res = await fetch(`${API_BASE}/books`);
+      if (!res.ok) return;
+      const serverBooks = await res.json() as Book[];
+      if (serverBooks && serverBooks.length) {
+        setBooks(prev => {
+          const merged = dedupe([...prev, ...serverBooks]);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }
+    } catch (e) {
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
+  return {
+    books,
+    addBook,
+    deleteBook,
+    updateBook,
+    syncLocalToServer,
+    isSyncing
+  };
 }
