@@ -1,0 +1,63 @@
+{
+  "users": [
+    {
+      "id": "user-noel",
+      "name": "Noel",
+      "email": "noelviajando@gmail.com",
+      "password": "0306"
+    },
+    {
+      "id": "user-mauricio",
+      "name": "Mauricio",
+      "email": "mauricioglopez@gmail.com",
+      "password": "1404"
+    }
+  ],
+  "books": [
+    {
+      "id": "69e81f9a-553c-41ac-b788-eb9b3118e8ab",
+      "title": "Pride and Prejudice",
+      "isRead": true,
+      "customInfo": [],
+      "notes": "<ol><li>This was a great book and I enyojed it very much.</li></ol>",
+      "author": "Jane Austen",
+      "finishedDate": "2026-09-14",
+      "pages": 400,
+      "genre": "Drama",
+      "publicationYear": 1800,
+      "ownerId": "user-noel",
+      "updatedAt": 1788867130073
+    },
+    {
+      "id": "f3ed17e4-1285-40d6-aa8b-8d14cd4b6a4d",
+      "title": "Rayuela",
+      "isRead": true,
+      "customInfo": [],
+      "notes": "This was a great book. I bougth it when I was in holidays in Uruguay. And it is a great book. This is a test to see what happens.&nbsp; This is a test to see if now the problem is final.&nbsp;",
+      "author": "Julio Cortazar",
+      "finishedDate": null,
+      "pages": null,
+      "genre": "",
+      "publicationYear": null,
+      "ownerId": "user-noel",
+      "updatedAt": 1788867130080
+    },
+    {
+      "id": "2ac3b362-1023-4ead-911e-d80844b44909",
+      "title": "Hamlet",
+      "isRead": true,
+      "customInfo": [],
+      "notes": "I really enjoy this book because. Checking if&nbsp;",
+      "author": "Shakespeare",
+      "finishedDate": null,
+      "pages": null,
+      "genre": "Drama",
+      "publicationYear": null,
+      "ownerId": "user-noel",
+      "updatedAt": 1788867130087
+    }
+  ],
+  "sync": {
+    "lastSync": 1788867130092
+  }
+}
