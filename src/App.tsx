@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useBooks } from './hooks/useBooks';
 import useUsers from './hooks/useUsers';
-import { BookList } from './components/BookList';
+import BookList from './components/BookList'; // CORREGIDO: Importación por defecto
 import { BookDetails } from './components/BookDetails';
 import { BookOpen } from 'lucide-react';
 import { Login } from './components/Login';
-import type { User } from './types';
+import type { Book, User } from './types';
 
 function App() {
   const { books, addBook, deleteBook, updateBook } = useBooks();
@@ -33,6 +33,14 @@ function App() {
     deleteBook(id);
     if (selectedId === id) {
       setSelectedId(null);
+    }
+  };
+
+  // CORREGIDO: Adaptación estricta al tipado que espera BookDetails
+  const handleUpdateBookFields = (id: string, updates: Partial<Book>) => {
+    const currentBook = books.find(b => b.id === id);
+    if (currentBook) {
+      updateBook({ ...currentBook, ...updates });
     }
   };
 
@@ -69,7 +77,7 @@ function App() {
           books={userBooks}
           selectedId={selectedId}
           onSelect={handleSelect}
-          onAdd={(title) => {
+          onAdd={(title: string) => { // CORREGIDO: Tipado explícito de string
             const id = addBook(title, currentUser.id);
             handleSelect(id);
           }}
@@ -87,7 +95,7 @@ function App() {
             </div>
             <BookDetails 
               book={selectedBook} 
-              onUpdate={updateBook}
+              onUpdate={handleUpdateBookFields} // CORREGIDO: Función con mapeo adaptado
               onDelete={handleDelete}
             />
           </div>
