@@ -129,9 +129,8 @@ function App() {
     console.debug('[App] selectedId changed', selectedId);
   }, [selectedId]);
 
-
   if (!currentUser) {
-  return <Login authenticate={(email, password) => { authenticate(email, password); return null; }} onLogin={login} />;
+  return <Login authenticate={authenticate as any} onLogin={login} />;
   }
   const userBooks = books.filter(b => b.ownerId === currentUser.id);
   // Keep showing the selected book by id even if ownerId mapping changes
