@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import type { Book } from '../types';
 
 const STORAGE_KEY = 'reading-tracker-books';
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+const API_BASE = 'https://6aa024883e0d88d3d7e5692d.mockapi.io';
 
 export function useBooks() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -152,13 +152,6 @@ export function useBooks() {
           console.debug('[useBooks] poll: merged', merged.length, 'books from server after sync');
           return merged;
         });
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    const iv = setInterval(() => { if (!cancelled) void poll(); }, 5000);
-    void poll();
     return () => { cancelled = true; clearInterval(iv); };
   }, []);
 
