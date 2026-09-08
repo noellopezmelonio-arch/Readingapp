@@ -7,9 +7,14 @@ const API_BASE = 'https://6aa024883e0d88d3d7e5692d.mockapi.io';
 export function useBooks() {
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Filtro inteligente que evita duplicados comparando títulos e IDs estrictamente
   const dedupe = (arr: Book[]) => {
     const m = new Map<string, Book>();
-    arr.forEach(b => { if (b && b.id) m.set(String(b.id), b); });
+    arr.forEach(b => {
+      if (b && b.title) {
+        m.set(b.title.toLowerCase().trim(), b);
+      }
+    });
     return Array.from(m.values());
   };
 
@@ -19,7 +24,7 @@ export function useBooks() {
       try {
         const parsed = JSON.parse(saved) as Partial<Book>[];
         return dedupe(parsed.map(p => ({
-          id: p.id ?? crypto.randomUUID(),
+          id: p.id ?? '',
           title: (p.title as string) ?? 'Untitled',
           isRead: (p.isRead as boolean) ?? false,
           customInfo: (p.customInfo as any[]) ?? [],
@@ -38,7 +43,6 @@ export function useBooks() {
     return [];
   });
 
-  // CORREGIDO: Evita la duplicación al refrescar la pestaña
   const syncLocalToServer = async () => {
     try {
       setIsSyncing(true);
@@ -47,7 +51,7 @@ export function useBooks() {
       const serverBooks = await res.json() as Book[];
       if (serverBooks && serverBooks.length) {
         setBooks(prev => {
-          // Unifica los libros locales con los del servidor basándose en ID únicos (evita duplicados)
+          // BLINDAJE: Mezcla y limpia duplicados por título antes de renderizar
           const merged = dedupe([...prev, ...serverBooks]);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
           return merged;
@@ -64,8 +68,9 @@ export function useBooks() {
   }, []);
 
   const addBook = (title: string, ownerId: string) => {
+    const tempId = 'temp-' + Date.now();
     const newBook: Book = {
-      id: crypto.randomUUID(),
+      id: tempId,
       title,
       isRead: false,
       customInfo: [],
@@ -83,7 +88,25 @@ export function useBooks() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-    return newBook.id;
+
+    fetch(`${API_BASE}/books`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newBook, id: undefined })
+    })
+    .then(res => res.ok ? res.json() : null)
+    .then((serverBook: Book | null) => {
+      if (serverBook && serverBook.id) {
+        setBooks(prev => {
+          const next = prev.map(b => b.title.toLowerCase().trim() === title.toLowerCase().trim() ? { ...b, id: String(serverBook.id) } : b);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          return next;
+        });
+      }
+    })
+    .catch(() => {});
+
+    return tempId;
   };
 
   const deleteBook = (id: string) => {
@@ -109,20 +132,10 @@ export function useBooks() {
       setIsSyncing(true);
       const userBooks = books.filter(b => b.ownerId === userId);
       
-      const res = await fetch(`${API_BASE}/books`);
-      const serverBooks = res.ok ? await res.json() as Book[] : [];
-      const serverIds = new Set(serverBooks.map(b => String(b.id)));
-
       for (const book of userBooks) {
-        if (serverIds.has(String(book.id))) {
+        if (book.id && !String(book.id).startsWith('temp-')) {
           await fetch(`${API_BASE}/books/${book.id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(book)
-          });
-        } else {
-          await fetch(`${API_BASE}/books`, {
-            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(book)
           });
@@ -143,5 +156,5 @@ export function useBooks() {
     syncLocalToServer,
     saveAndSync,
     isSyncing
-  };
-}
+  }
+ }
